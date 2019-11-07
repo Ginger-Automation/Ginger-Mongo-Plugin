@@ -16,15 +16,15 @@ limitations under the License.
 */
 #endregion
 
+using GingerMongoDB;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections.Generic;
 using MongoDB;
-using System;
+using System.Collections.Generic;
 using System.Data;
 
 namespace MongoDBTest
 {
-    [Ignore]
+
     [TestClass]
     public class MongoUnitTest
     {
@@ -33,40 +33,86 @@ namespace MongoDBTest
         [ClassInitialize]
         public static void ClassInit(TestContext context)
         {
-            Dictionary<string, string> param = new Dictionary<string, string>();
-            param.Add("ConnectionString", "mongodb://localhost:27017/mycollection");
-            db.KeyvalParamatersList = param;
-            Boolean testconn = db.OpenConnection(param);
+            db.ConnectionString = "mongodb://localhost:27017/";
+        }
+
+
+        [TestMethod]
+        public void ExecuteQueryEmptyFilter()
+        {
+            //Arrange
+            string query = "db.students.find({})";
+
+            //Act
+            List<string> documents = db.ExecuteQuery(query);   // get all records
+
+            //Assert
+            Assert.AreEqual("{ \"_id\" : ObjectId(\"5dc21f9a0992bc1ad8c33c13\"), \"First\" : \"Jojo\", \"Last\" : \"Momo\" }", documents[0]);
+            Assert.AreEqual("{ \"_id\" : ObjectId(\"5dc21fa80992bc1ad8c33c14\"), \"First\" : \"Dina\" }", documents[1]);
+            Assert.AreEqual(2, documents.Count);
+            
+        }
+
+        [TestMethod]
+        public void ExecuteQueryWithFilter()
+        {
+            //Arrange
+            string query = "db.students.find({First: \"Dina\"})";
+
+            //Act
+            List<string> documents = db.ExecuteQuery(query);   
+
+            //Assert            
+            Assert.AreEqual("{ \"_id\" : ObjectId(\"5dc21fa80992bc1ad8c33c14\"), \"First\" : \"Dina\" }", documents[0]);
+            Assert.AreEqual(1, documents.Count);
 
         }
 
         [TestMethod]
-        public void OpenConnection()
+        public void ExecuteQueryWithFilterAndFields()
         {
             //Arrange
-            Dictionary<string, string> param = new Dictionary<string, string>();
-            param.Add("ConnectionString", "mongodb://localhost:27017/mycollection");
+            string query = "db.students.find({First: \"Dina\"}, {First})";
 
             //Act
-            Boolean testconn = db.OpenConnection(param);
+            List<string> documents = db.ExecuteQuery(query);   
 
             //Assert
-            Assert.IsTrue(testconn);
+            Assert.AreEqual("{ \"_id\" : ObjectId(\"5dc21f9a0992bc1ad8c33c13\"), \"First\" : \"Jojo\", \"Last\" : \"Momo\" }", documents[0]);
+            Assert.AreEqual("{ \"_id\" : ObjectId(\"5dc21fa80992bc1ad8c33c14\"), \"First\" : \"Dina\" }", documents[1]);
+            Assert.AreEqual(2, documents.Count);
+
         }
+
 
         [TestMethod]
-        public void GetTableList()
+        public void SyntaxParserTest()
         {
-            //Arrange
-            List<string> Tables = null;
+            // Arrange
+            SyntaxParser1 syntaxParser1 = new SyntaxParser1();            
 
-            //Act
-            Tables = db.GetTablesList();
+            // Act
+            var result = syntaxParser1.Tokenize("db.students.find({First: \"Dina\"})");
+            // CommandExecutor commandExecutor = db.GetCommandExecutor();
 
-            //Assert
-            Assert.AreEqual(1,Tables.Count);
-            Assert.AreEqual("mycollection", Tables[0]);
+            List<string> rc= db.CommandExecutor.RunDBAction(result);            
         }
+
+
+
+        //[TestMethod]
+        //public void GetTableList()
+        //{
+        //    //Arrange
+        //    List<string> Tables = null;
+
+        //    //Act
+        //    Tables = db.GetTablesList();
+
+        //    //Assert
+        //    Assert.AreEqual(1, Tables.Count);
+        //    Assert.AreEqual("mycollection", Tables[0]);
+        //}
 
         [TestMethod]
         public void GetTablesColumns()
@@ -79,25 +125,25 @@ namespace MongoDBTest
             Columns = db.GetTablesColumns(tablename);
 
             //Assert
-            Assert.AreEqual(3,Columns.Count);
+            Assert.AreEqual(3, Columns.Count);
             Assert.AreEqual("name", Columns[0]);
             Assert.AreEqual("age", Columns[1]);
             Assert.AreEqual("website", Columns[2]);
         }
 
-        [TestMethod]
-        public void RunUpdateCommand()
-        {
-            //Arrange
-            string upadateCommand = "db.mycollection.update({ \"name\" :  \"ff\"},{$set: { \"website\" : \"aaa.com\"} }); ";
-            string result = null;
+        //[TestMethod]
+        //public void RunUpdateCommand()
+        //{
+        //    //Arrange
+        //    string upadateCommand = "db.mycollection.update({ \"name\" :  \"ff\"},{$set: { \"website\" : \"aaa.com\"} }); ";
+        //    string result = null;
 
-            //Act
-            result = db.RunUpdateCommand(upadateCommand, false);
+        //    //Act
+        //    result = db.RunUpdateCommand(upadateCommand, false);
 
-            //Assert
-            Assert.AreEqual(result, "Success");
-        }
+        //    //Assert
+        //    Assert.AreEqual(result, "Success");
+        //}
 
         [TestMethod]
         public void GetSingleValue()
@@ -115,33 +161,33 @@ namespace MongoDBTest
             Assert.AreEqual(result, "zzz");
         }
 
-        [TestMethod]
-        public void DBQuery()
-        {
-            //Arrange
-            DataTable result = null;
+        //[TestMethod]
+        //public void DBQuery()
+        //{
+        //    //Arrange
+        //    DataTable result = null;
 
-            //Act
-            result = db.DBQuery("db.mycollection.count");
+        //    //Act
+        //    result = db.DBQuery("db.students.count");
 
-            //Assert
-            Assert.AreEqual(result.Rows.Count, 16);
-        }
+        //    //Assert
+        //    Assert.AreEqual(result.Rows.Count, 16);
+        //}
 
-        [TestMethod]
-        public void GetRecordCount()
-        {
-            //Arrange
-            int a = 0;
+        //[TestMethod]
+        //public void GetRecordCount()
+        //{
+        //    //Arrange
+        //    int a = 0;
 
-            //Act
-            a = db.GetRecordCount("mycollection");
+        //    //Act
+        //    a = db.GetRecordCount("mycollection");
 
-            //Assert
-            Assert.AreEqual(a, 16);
-        }
+        //    //Assert
+        //    Assert.AreEqual(a, 16);
+        //}
 
-        
+
 
     }
 }
